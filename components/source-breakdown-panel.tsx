@@ -1,4 +1,9 @@
-import { Newspaper, Smartphone, MessageSquareText, CloudRain } from "lucide-react";
+import {
+  Newspaper,
+  Smartphone,
+  MessageSquareText,
+  CloudRain,
+} from "lucide-react";
 import { SourceBreakdown } from "../lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -9,14 +14,16 @@ type SourceBreakdownPanelProps = {
 
 export function SourceBreakdownPanel({ breakdown }: SourceBreakdownPanelProps) {
   const total =
-    breakdown.newsSignals +
-    breakdown.appReports +
-    breakdown.whatsappReports;
+    breakdown.newsSignals + breakdown.appReports + breakdown.whatsappReports;
 
   const rows = [
     { label: "News Signals", value: breakdown.newsSignals, icon: Newspaper },
     { label: "App Reports", value: breakdown.appReports, icon: Smartphone },
-    { label: "WhatsApp Reports", value: breakdown.whatsappReports, icon: MessageSquareText },
+    {
+      label: "WhatsApp Reports",
+      value: breakdown.whatsappReports,
+      icon: MessageSquareText,
+    },
   ];
 
   return (
@@ -30,7 +37,7 @@ export function SourceBreakdownPanel({ breakdown }: SourceBreakdownPanelProps) {
           return (
             <div
               key={row.label}
-              className="rounded-md border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.9),transparent_55%),linear-gradient(to_right,_rgba(15,23,42,0.95),rgba(15,23,42,0.8))] p-3"
+              className="rounded-md border border-white/5 bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.9),transparent_55%),linear-gradient(to_right,rgba(15,23,42,0.95),rgba(15,23,42,0.8))] p-3"
             >
               <div className="mb-2 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 text-slate-300">
@@ -44,13 +51,15 @@ export function SourceBreakdownPanel({ breakdown }: SourceBreakdownPanelProps) {
           );
         })}
 
-        <div className="rounded-md border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.32),transparent_55%),#020617] p-3">
+        <div className="rounded-md border border-white/5 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.32),transparent_55%),#020617] p-3">
           <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
             <div className="flex items-center gap-2">
               <CloudRain className="h-3.5 w-3.5" />
               <span>Weather Severity</span>
             </div>
-            <span className="font-mono text-slate-400">{breakdown.weatherSeverity.toFixed(1)}/10</span>
+            <span className="font-mono text-slate-400">
+              {breakdown.weatherSeverity.toFixed(1)}/10
+            </span>
           </div>
           <Progress value={(breakdown.weatherSeverity / 10) * 100} />
         </div>

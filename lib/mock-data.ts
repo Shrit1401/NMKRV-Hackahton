@@ -215,7 +215,7 @@ export function simulateEvents(events: DisasterEvent[]): DisasterEvent[] {
     const nextScore = Math.max(35, Math.min(98, event.confidenceScore + delta));
 
     const nextTrend: ConfidenceTrend[] = [
-      ...event.confidenceTrend.slice(1),
+      ...(event.confidenceTrend ?? []).slice(1),
       {
         time: new Date().toLocaleTimeString("en-IN", {
           hour12: false,
@@ -235,7 +235,12 @@ export function simulateEvents(events: DisasterEvent[]): DisasterEvent[] {
       whatsappReports: event.whatsappReports + Math.floor(Math.random() * 2),
       weatherSeverity: Math.max(
         3,
-        Math.min(10, Number((event.weatherSeverity + Math.random() * 0.5 - 0.2).toFixed(1))),
+        Math.min(
+          10,
+          Number(
+            (event.weatherSeverity + Math.random() * 0.5 - 0.2).toFixed(1),
+          ),
+        ),
       ),
       confidenceTrend: nextTrend,
     };

@@ -1,5 +1,10 @@
 export type SeverityLevel = "high" | "medium" | "low";
 
+export type ConfidenceTrend = {
+  time: string;
+  score: number;
+};
+
 export type DisasterEvent = {
   id: string;
   type: string;
@@ -16,6 +21,7 @@ export type DisasterEvent = {
   userReports: number;
   whatsappReports: number;
   weatherSeverity: number;
+  confidenceTrend?: ConfidenceTrend[];
 };
 
 export type SourceBreakdown = {
