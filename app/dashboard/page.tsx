@@ -5,19 +5,25 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderBar } from "../../components/header-bar";
 import { MetricsBar } from "../../components/metrics-bar";
 import { EventDetailsPanel } from "../../components/event-details-panel";
-import { SourceBreakdownPanel } from "../../components/source-breakdown-panel";
 import { WeatherForecastPanel } from "../../components/weather-forecast-panel";
 import { ActivityFeed } from "../../components/activity-feed";
 import { RiskDistributionPanel } from "../../components/risk-distribution-panel";
 import { ReportDetailsPanel } from "../../components/report-details-panel";
+import { NewsPanel } from "../../components/news-panel";
 import { Skeleton } from "../../components/ui/skeleton";
-import { fetchDashboardFeed, fetchEvents, fetchReport } from "../../lib/api";
+import {
+  fetchDashboardFeed,
+  fetchEvents,
+  fetchNews,
+  fetchReport,
+} from "../../lib/api";
 import { getSourceBreakdown } from "../../lib/disaster-utils";
 import { ActivityLogEntry, DisasterEvent } from "../../lib/types";
 import type {
   ApiEvent,
   DashboardFeedResponse,
   ReportDetail,
+  NewsArticle,
 } from "../../lib/api";
 
 const DisasterMap = dynamic(
@@ -113,6 +119,7 @@ export default function Home() {
   );
   const [reportLoading, setReportLoading] = useState(false);
   const [weatherSeverity, setWeatherSeverity] = useState<number | null>(null);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId),
@@ -163,9 +170,10 @@ export default function Home() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [eventsResponse, feedResponse] = await Promise.all([
+      const [eventsResponse, feedResponse, newsResponse] = await Promise.all([
         fetchEvents(),
         fetchDashboardFeed(),
+        fetchNews(),
       ]);
 
       const mappedEvents = eventsResponse.map(mapApiEvent);
@@ -181,6 +189,7 @@ export default function Home() {
       }
 
       setActivity(buildActivity(feedResponse));
+      setNewsArticles(newsResponse.articles);
     } catch (error) {
       console.error(error);
     } finally {
@@ -225,78 +234,81 @@ export default function Home() {
       : breakdown;
 
   return (
-    <div className="relative h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.16),transparent_55%),radial-gradient(circle_at_bottom,rgba(129,140,248,0.18),transparent_55%),linear-gradient(to_bottom,#020617,#020617)]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#06070b] text-slate-100">
+      <div className="lp-ambient pointer-events-none absolute inset-0 -z-10" />
+      <div className="lp-orbit pointer-events-none absolute inset-0 -z-10" />
+      <div className="lp-grain pointer-events-none absolute inset-0 -z-10" />
       <HeaderBar onRefresh={handleRefresh} />
 
-      <main className="h-[calc(100vh-80px)] p-4">
-        <div className="grid h-full grid-cols-1 gap-4 xl:grid-cols-10">
-          <section className="h-full xl:col-span-7">
-            {loading ? (
-              <div className="flex h-full flex-col gap-3 rounded-xl border border-white/5 bg-slate-950/80 p-4">
-                <div className="flex items-center justify-between">
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-5 w-24" />
+      <main className="h-[calc(100vh-72px)] p-4 sm:p-5">
+        <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col gap-4">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-12">
+            <section className="h-full xl:col-span-8">
+              {loading ? (
+                <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <div className="flex h-full flex-col gap-3">
+                    <Skeleton className="h-8 w-56" />
+                    <Skeleton className="h-full w-full rounded-xl" />
+                  </div>
                 </div>
-                <div className="flex h-full flex-col gap-3">
-                  <Skeleton className="h-8 w-56" />
-                  <Skeleton className="h-full w-full rounded-lg" />
-                </div>
-              </div>
-            ) : (
-              <DisasterMap
-                events={events}
-                selectedEventId={selectedEvent?.id}
-                onSelectEvent={setSelectedId}
-                weatherSeverity={weatherSeverity ?? undefined}
-              />
-            )}
-          </section>
-
-          <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1 xl:col-span-3">
-            {loading ? (
-              <>
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-40 w-full rounded-xl" />
-                <Skeleton className="h-40 w-full rounded-xl" />
-                <Skeleton className="h-32 w-full rounded-xl" />
-                <Skeleton className="h-32 w-full rounded-xl" />
-                <Skeleton className="h-32 w-full rounded-xl" />
-              </>
-            ) : (
-              <>
-                <MetricsBar
-                  activeDisasters={metrics.activeDisasters}
-                  avgConfidence={metrics.avgConfidence}
-                  totalReports={metrics.totalReports}
-                  highRiskZones={metrics.highRiskZones}
-                />
-                <EventDetailsPanel
-                  event={selectedEvent}
+              ) : (
+                <DisasterMap
+                  events={events}
+                  selectedEventId={selectedEvent?.id}
+                  onSelectEvent={setSelectedId}
                   weatherSeverity={weatherSeverity ?? undefined}
                 />
-                {breakdownWithWeather ? (
-                  <SourceBreakdownPanel breakdown={breakdownWithWeather} />
-                ) : null}
-                {selectedEvent ? (
-                  <WeatherForecastPanel
-                    event={selectedEvent}
-                    onSeverityChange={setWeatherSeverity}
+              )}
+            </section>
+
+            <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1 xl:col-span-4">
+              {loading ? (
+                <>
+                  <Skeleton className="h-24 w-full rounded-2xl" />
+                  <Skeleton className="h-40 w-full rounded-2xl" />
+                  <Skeleton className="h-40 w-full rounded-2xl" />
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                  <Skeleton className="h-32 w-full rounded-2xl" />
+                </>
+              ) : (
+                <>
+                  <MetricsBar
+                    activeDisasters={metrics.activeDisasters}
+                    avgConfidence={metrics.avgConfidence}
+                    totalReports={metrics.totalReports}
+                    highRiskZones={metrics.highRiskZones}
                   />
-                ) : null}
-                <RiskDistributionPanel events={events} />
-                <ReportDetailsPanel
-                  report={selectedReportId ? selectedReport : null}
-                  loading={reportLoading}
-                  onClose={handleCloseReport}
-                />
-                <ActivityFeed
-                  entries={activity}
-                  onSelectEntry={handleSelectEntry}
-                />
-              </>
-            )}
-          </aside>
+                  <EventDetailsPanel
+                    event={selectedEvent}
+                    weatherSeverity={weatherSeverity ?? undefined}
+                  />
+                  {selectedEvent ? (
+                    <WeatherForecastPanel
+                      event={selectedEvent}
+                      onSeverityChange={setWeatherSeverity}
+                    />
+                  ) : null}
+                  <RiskDistributionPanel events={events} />
+                  <ReportDetailsPanel
+                    report={selectedReportId ? selectedReport : null}
+                    loading={reportLoading}
+                    onClose={handleCloseReport}
+                  />
+                  <NewsPanel articles={newsArticles} />
+
+                  <ActivityFeed
+                    entries={activity}
+                    onSelectEntry={handleSelectEntry}
+                  />
+                </>
+              )}
+            </aside>
+          </div>
         </div>
       </main>
     </div>

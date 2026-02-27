@@ -13,6 +13,22 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type NewsArticle = {
+  title: string;
+  source: string;
+  url: string;
+  summary: string;
+  published: string;
+  disaster_type: string;
+  query: string;
+};
+
+export type NewsResponse = {
+  articles: NewsArticle[];
+  total: number;
+  scraped_at: string;
+};
+
 export type ApiEvent = {
   id: string;
   type: string;
@@ -133,3 +149,8 @@ export async function fetchWeatherForecast(
 
   return response.json() as Promise<WeatherForecastResponse>;
 }
+
+export function fetchNews(): Promise<NewsResponse> {
+  return getJson<NewsResponse>("/news");
+}
+

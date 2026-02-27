@@ -36,10 +36,8 @@ export default function LandingPage() {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 pb-12 pt-8 sm:px-10 lg:px-16">
         <header className="lp-reveal flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid size-8 place-items-center rounded-full border border-white/20 bg-white/5">
-              <Sparkles className="size-4 text-[#d9ffd0]" />
-            </div>
-            <p className="font-[var(--font-syne)] text-sm tracking-[0.25em] text-white/70 uppercase">
+            <img src="/img.png" alt="ResQNet" className="h-8" />
+            <p className="font-(--font-syne) text-sm tracking-[0.25em] text-white/70 uppercase">
               RESQNET
             </p>
           </div>
