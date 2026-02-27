@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DivIcon } from "leaflet";
 import {
   MapContainer,
@@ -15,8 +15,9 @@ import { DisasterEvent } from "../lib/types";
 import {
   getSeverityColor,
   getSeverityLabel,
+  getWeatherSeverityLabel,
   INDIA_CENTER,
-} from "../lib/mock-data";
+} from "../lib/disaster-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 type DisasterMapProps = {
@@ -24,6 +25,8 @@ type DisasterMapProps = {
   selectedEventId?: string;
   onSelectEvent: (id: string) => void;
 };
+
+const OPENWEATHER_API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API;
 
 let leafletInstance: typeof import("leaflet") | null = null;
 
@@ -55,10 +58,42 @@ export function DisasterMap({
   selectedEventId,
   onSelectEvent,
 }: DisasterMapProps) {
+  const [showWeatherLayer, setShowWeatherLayer] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(true);
+  const [simulationTime, setSimulationTime] = useState(0);
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0],
     [events, selectedEventId],
   );
+
+  useEffect(() => {
+    if (!isSimulating) {
+      return;
+    }
+
+    let frameId: number;
+    let lastTime = performance.now();
+
+    const loop = (now: number) => {
+      const deltaSeconds = (now - lastTime) / 1000;
+      lastTime = now;
+
+      setSimulationTime((prev) => {
+        const speed = 0.06;
+        const next = prev + deltaSeconds * speed;
+        if (next >= 1) return 0;
+        return next;
+      });
+
+      frameId = window.requestAnimationFrame(loop);
+    };
+
+    frameId = window.requestAnimationFrame(loop);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isSimulating]);
 
   return (
     <Card className="relative h-full overflow-hidden">
@@ -82,11 +117,45 @@ export function DisasterMap({
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
 
+            {OPENWEATHER_API_KEY && showWeatherLayer ? (
+              <TileLayer
+                attribution='&copy; <a href="https://openweathermap.org/">OpenWeather</a>'
+                url={`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`}
+                opacity={0.6}
+              />
+            ) : null}
+
             {events.map((event) => {
               const highRisk = event.confidenceScore >= 85;
+              const isFloodLike =
+                event.severity === "high" ||
+                event.name.toLowerCase().includes("flood") ||
+                event.name.toLowerCase().includes("river") ||
+                event.name.toLowerCase().includes("cyclone");
+
+              const phase =
+                (simulationTime + event.confidenceScore / 140) % 1;
+              const intensity =
+                0.35 + 0.4 * (1 - Math.abs(0.5 - phase) * 2);
+              const baseRadius =
+                event.id === selectedEvent?.id ? 26 : 20;
+              const waveRadius = baseRadius + phase * 20;
 
               return (
                 <Fragment key={event.id}>
+                  {isFloodLike ? (
+                    <CircleMarker
+                      center={[event.location.lat, event.location.lng]}
+                      radius={waveRadius}
+                      pathOptions={{
+                        color: "rgba(56,189,248,0.7)",
+                        fillColor: "rgba(56,189,248,0.45)",
+                        fillOpacity: intensity,
+                        weight: 1.5,
+                      }}
+                      stroke
+                    />
+                  ) : null}
                   <CircleMarker
                     center={[event.location.lat, event.location.lng]}
                     radius={event.id === selectedEvent?.id ? 18 : 14}
@@ -105,6 +174,10 @@ export function DisasterMap({
                         <p className="font-semibold">{event.name}</p>
                         <p>{event.location.label}</p>
                         <p>Confidence: {event.confidenceScore}%</p>
+                        <p>
+                          Weather: {getWeatherSeverityLabel(event.weatherSeverity)} (
+                          {event.weatherSeverity.toFixed(1)}/10)
+                        </p>
                       </div>
                     </Popup>
                   </CircleMarker>
@@ -120,7 +193,61 @@ export function DisasterMap({
               );
             })}
           </MapContainer>
+          {OPENWEATHER_API_KEY ? (
+            <div className="pointer-events-auto absolute right-4 top-4 z-500 flex items-center gap-2 rounded-md border border-white/10 bg-slate-900/80 px-3 py-1.5 text-[11px] text-slate-200 shadow-lg backdrop-blur">
+              <span className="uppercase tracking-[0.16em] text-slate-400">
+                Weather Layer
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowWeatherLayer((prev) => !prev)}
+                className={[
+                  "rounded px-2 py-0.5 text-xs font-medium transition",
+                  showWeatherLayer
+                    ? "bg-sky-500 text-slate-950 shadow-sm"
+                    : "bg-slate-800 text-slate-200 hover:bg-slate-700",
+                ].join(" ")}
+              >
+                {showWeatherLayer ? "On" : "Off"}
+              </button>
+            </div>
+          ) : null}
           <div className="pointer-events-none absolute inset-0 z-350 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.24),transparent_45%),radial-gradient(circle_at_bottom,rgba(129,140,248,0.3),transparent_55%)]" />
+          <div className="pointer-events-none absolute inset-0 z-360 resq-flood-overlay" />
+
+          {selectedEvent ? (
+            <div className="pointer-events-auto absolute left-4 top-4 z-500 flex items-center gap-3 rounded-md border border-sky-500/40 bg-slate-950/85 px-3 py-1.5 text-[11px] text-sky-100 shadow-xl backdrop-blur">
+              <div className="flex flex-col">
+                <span className="uppercase tracking-[0.16em] text-sky-300/80">
+                  Flood Digital Twin
+                </span>
+                <span className="text-[10px] text-slate-300">
+                  {Math.round(simulationTime * 180)
+                    .toString()
+                    .padStart(3, "0")}{" "}
+                  min scenario
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSimulating((prev) => !prev)}
+                className={[
+                  "rounded px-2 py-0.5 text-[10px] font-semibold tracking-wide transition",
+                  isSimulating
+                    ? "bg-sky-500 text-slate-950 shadow-sm"
+                    : "bg-slate-800 text-slate-100 hover:bg-slate-700",
+                ].join(" ")}
+              >
+                {isSimulating ? "Pause" : "Play"}
+              </button>
+              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-800/80">
+                <div
+                  className="h-full bg-linear-to-r from-sky-400 via-cyan-300 to-indigo-400 transition-[width] duration-150"
+                  style={{ width: `${Math.max(simulationTime, 0.02) * 100}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
 
           {selectedEvent ? (
             <div className="pointer-events-none absolute bottom-4 left-4 z-500 max-w-sm rounded-lg border border-white/10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.32),transparent_55%),rgba(15,23,42,0.96)] p-3 shadow-[0_20px_70px_rgba(15,23,42,0.95)] backdrop-blur-md">
@@ -139,6 +266,10 @@ export function DisasterMap({
                 </span>
                 <span className="rounded border border-white/10 bg-slate-900/60 px-2 py-1 text-slate-200">
                   Confidence: {selectedEvent.confidenceScore}%
+                </span>
+                <span className="rounded border border-white/10 bg-slate-900/60 px-2 py-1 text-slate-200">
+                  Weather: {getWeatherSeverityLabel(selectedEvent.weatherSeverity)} (
+                  {selectedEvent.weatherSeverity.toFixed(1)}/10)
                 </span>
               </div>
             </div>

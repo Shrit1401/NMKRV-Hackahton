@@ -74,6 +74,31 @@ body {
   }
 }
 
+.resq-flood-overlay {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(56, 189, 248, 0.18), transparent 60%),
+    radial-gradient(circle at 84% 92%, rgba(59, 130, 246, 0.2), transparent 62%),
+    radial-gradient(circle at 50% 60%, rgba(8, 47, 73, 0.85), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.8;
+  animation: resqFloodDrift 20s ease-in-out infinite alternate;
+}
+
+@keyframes resqFloodDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(8px, -10px, 0) scale(1.04);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(-10px, 8px, 0) scale(1.02);
+    opacity: 0.7;
+  }
+}
+
 .leaflet-control-attribution {
   background: rgba(2, 6, 23, 0.85) !important;
   color: #94a3b8 !important;

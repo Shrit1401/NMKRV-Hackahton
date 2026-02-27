@@ -1,5 +1,5 @@
 import { SignalSheetRow } from "../lib/types";
-import { getSeverityLabel } from "../lib/mock-data";
+import { getSeverityLabel } from "../lib/disaster-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";

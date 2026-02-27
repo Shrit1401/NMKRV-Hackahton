@@ -199,6 +199,12 @@ export function getSeverityLabel(severity: SeverityLevel): string {
   return "Low";
 }
 
+export function getWeatherSeverityLabel(score: number): string {
+  if (score >= 7.5) return "High";
+  if (score >= 4) return "Moderate";
+  return "Low";
+}
+
 export function simulateEvents(events: DisasterEvent[]): DisasterEvent[] {
   return events.map((event) => {
     const delta = Math.random() > 0.5 ? 2 : -2;

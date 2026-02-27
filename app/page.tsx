@@ -1,20 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HeaderBar } from "../components/header-bar";
-import { DisasterMap } from "../components/disaster-map";
 import { MetricsBar } from "../components/metrics-bar";
 import { EventDetailsPanel } from "../components/event-details-panel";
 import { SourceBreakdownPanel } from "../components/source-breakdown-panel";
-import { ConfidenceChart } from "../components/confidence-chart";
+import { WeatherForecastPanel } from "../components/weather-forecast-panel";
 import { ActivityFeed } from "../components/activity-feed";
-import { SignalSheetPanel } from "../components/signal-sheet-panel";
-import { SourceTrendPanel } from "../components/source-trend-panel";
 import { RiskDistributionPanel } from "../components/risk-distribution-panel";
-import { fetchDashboardFeed, fetchEvents } from "../lib/api";
-import { getSourceBreakdown, makeTrend, signalSheetRows, sourceTrendData } from "../lib/mock-data";
+import { ReportDetailsPanel } from "../components/report-details-panel";
+import { fetchDashboardFeed, fetchEvents, fetchReport } from "../lib/api";
+import { getSourceBreakdown } from "../lib/disaster-utils";
 import { ActivityLogEntry, DisasterEvent } from "../lib/types";
-import type { ApiEvent, DashboardFeedResponse } from "../lib/api";
+import type { ApiEvent, DashboardFeedResponse, ReportDetail } from "../lib/api";
+
+const DisasterMap = dynamic(
+  () => import("../components/disaster-map").then((mod) => mod.DisasterMap),
+  { ssr: false },
+);
 
 function mapApiEvent(event: ApiEvent): DisasterEvent {
   const name = `${event.type.charAt(0).toUpperCase()}${event.type.slice(1)} Event`;
@@ -35,7 +39,6 @@ function mapApiEvent(event: ApiEvent): DisasterEvent {
     userReports: event.source_breakdown.app ?? 0,
     whatsappReports: event.source_breakdown.whatsapp ?? 0,
     weatherSeverity: Number((event.weather_severity / 10).toFixed(1)),
-    confidenceTrend: makeTrend(Math.round(event.confidence)),
   };
 }
 
@@ -53,7 +56,10 @@ function buildActivity(feed: DashboardFeedResponse): ActivityLogEntry[] {
     })),
   ];
 
-  items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  items.sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
 
   return items.map((item, index) => {
     const createdAt = new Date(item.created_at);
@@ -74,6 +80,7 @@ function buildActivity(feed: DashboardFeedResponse): ActivityLogEntry[] {
         id: `feed-report-${index}`,
         timestamp,
         message,
+        reportId: r.id,
       };
     }
 
@@ -85,6 +92,7 @@ function buildActivity(feed: DashboardFeedResponse): ActivityLogEntry[] {
       id: `feed-event-${index}`,
       timestamp,
       message,
+      eventId: e.id,
     };
   });
 }
@@ -94,6 +102,11 @@ export default function Home() {
   const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportDetail | null>(
+    null,
+  );
+  const [reportLoading, setReportLoading] = useState(false);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId),
@@ -112,15 +125,22 @@ export default function Home() {
 
     const totalReports = events.reduce(
       (sum, event) =>
-        sum + event.socialCount + event.newsCount + event.userReports + event.whatsappReports,
+        sum +
+        event.socialCount +
+        event.newsCount +
+        event.userReports +
+        event.whatsappReports,
       0,
     );
 
     const avgConfidence = Math.round(
-      events.reduce((sum, event) => sum + event.confidenceScore, 0) / events.length,
+      events.reduce((sum, event) => sum + event.confidenceScore, 0) /
+        events.length,
     );
 
-    const highRiskZones = events.filter((event) => event.severity === "high").length;
+    const highRiskZones = events.filter(
+      (event) => event.severity === "high",
+    ).length;
 
     return {
       activeDisasters: events.length,
@@ -142,7 +162,10 @@ export default function Home() {
       setEvents(mappedEvents);
 
       if (mappedEvents.length > 0) {
-        if (!selectedId || !mappedEvents.some((event) => event.id === selectedId)) {
+        if (
+          !selectedId ||
+          !mappedEvents.some((event) => event.id === selectedId)
+        ) {
           setSelectedId(mappedEvents[0].id);
         }
       }
@@ -159,6 +182,27 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
+  const handleSelectEntry = async (entry: ActivityLogEntry) => {
+    if (!entry.reportId) {
+      return;
+    }
+    setSelectedReportId(entry.reportId);
+    setReportLoading(true);
+    try {
+      const detail = await fetchReport(entry.reportId);
+      setSelectedReport(detail);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleCloseReport = () => {
+    setSelectedReportId(null);
+    setSelectedReport(null);
+  };
+
   const handleRefresh = () => {
     loadData();
   };
@@ -171,7 +215,11 @@ export default function Home() {
       <main className="h-[calc(100vh-80px)] p-4">
         <div className="grid h-full grid-cols-1 gap-4 xl:grid-cols-10">
           <section className="h-full xl:col-span-7">
-            <DisasterMap events={events} selectedEventId={selectedEvent?.id} onSelectEvent={setSelectedId} />
+            <DisasterMap
+              events={events}
+              selectedEventId={selectedEvent?.id}
+              onSelectEvent={setSelectedId}
+            />
           </section>
 
           <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1 xl:col-span-3">
@@ -182,16 +230,27 @@ export default function Home() {
               highRiskZones={metrics.highRiskZones}
             />
             <EventDetailsPanel event={selectedEvent} />
-            {selectedEvent ? <SourceBreakdownPanel breakdown={getSourceBreakdown(selectedEvent)} /> : null}
-            <SignalSheetPanel rows={signalSheetRows} />
-            {selectedEvent ? <ConfidenceChart trend={selectedEvent.confidenceTrend} /> : null}
-            <SourceTrendPanel data={sourceTrendData} />
+            {selectedEvent ? (
+              <SourceBreakdownPanel
+                breakdown={getSourceBreakdown(selectedEvent)}
+              />
+            ) : null}
+            {selectedEvent ? (
+              <WeatherForecastPanel event={selectedEvent} />
+            ) : null}
             <RiskDistributionPanel events={events} />
-            <ActivityFeed entries={activity} />
+            <ReportDetailsPanel
+              report={selectedReportId ? selectedReport : null}
+              loading={reportLoading}
+              onClose={handleCloseReport}
+            />
+            <ActivityFeed
+              entries={activity}
+              onSelectEntry={handleSelectEntry}
+            />
           </aside>
         </div>
       </main>
     </div>
   );
 }
-

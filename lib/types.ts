@@ -15,7 +15,6 @@ export type DisasterEvent = {
   userReports: number;
   whatsappReports: number;
   weatherSeverity: number;
-  confidenceTrend: ConfidenceTrend[];
 };
 
 export type SourceBreakdown = {
@@ -26,15 +25,12 @@ export type SourceBreakdown = {
   weatherSeverity: number;
 };
 
-export type ConfidenceTrend = {
-  time: string;
-  score: number;
-};
-
 export type ActivityLogEntry = {
   id: string;
   timestamp: string;
   message: string;
+  reportId?: string;
+  eventId?: string;
 };
 
 export type SignalSource = "News" | "Social" | "App" | "WhatsApp";
