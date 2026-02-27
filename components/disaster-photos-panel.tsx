@@ -46,4 +46,3 @@ export function DisasterPhotosPanel({ photos }: DisasterPhotosPanelProps) {
     </Card>
   );
 }
-

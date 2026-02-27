@@ -320,13 +320,13 @@ export default function Home() {
                     />
                   ) : null}
                   <RiskDistributionPanel events={events} />
+                  <DisasterPhotosPanel photos={disasterPhotos} />
+                  <NewsPanel articles={newsArticles} />
                   <ReportDetailsPanel
                     report={selectedReportId ? selectedReport : null}
                     loading={reportLoading}
                     onClose={handleCloseReport}
                   />
-                  <DisasterPhotosPanel photos={disasterPhotos} />
-                  <NewsPanel articles={newsArticles} />
 
                   <ActivityFeed
                     entries={activity}

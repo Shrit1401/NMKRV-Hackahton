@@ -13,9 +13,9 @@ const syne = Syne({
 });
 
 const stats = [
-  { label: "Signal refresh", value: "1.2s" },
-  { label: "Regions covered", value: "218" },
-  { label: "Model confidence", value: "97.4%" },
+  { label: "Signal refresh", value: "12s" },
+  { label: "Regions covered", value: "30" },
+  { label: "Model confidence", value: "93.4%" },
 ];
 
 const features = [

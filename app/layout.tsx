@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ResQNet – Real-Time Disaster Intelligence Network",
   description: "Authority-grade disaster intelligence control center dashboard.",
+  icons: {
+    icon: "/img.png",
+  },
 };
 
 export default function RootLayout({
