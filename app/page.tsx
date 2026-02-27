@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Sora, Syne } from "next/font/google";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -70,6 +70,12 @@ export default function LandingPage() {
               >
                 Start Monitoring
                 <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="/report"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/85 transition hover:-translate-y-0.5 hover:bg-white/[0.1]"
+              >
+                Open Report Simulation
               </Link>
             </div>
           </div>

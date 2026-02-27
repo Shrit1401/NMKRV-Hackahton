@@ -2,6 +2,7 @@ export type SeverityLevel = "high" | "medium" | "low";
 
 export type DisasterEvent = {
   id: string;
+  type: string;
   name: string;
   location: {
     label: string;

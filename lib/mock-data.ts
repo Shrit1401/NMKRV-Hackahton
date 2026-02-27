@@ -21,6 +21,7 @@ export const makeTrend = (base: number): ConfidenceTrend[] => [
 export const initialDisasterEvents: DisasterEvent[] = [
   {
     id: "ev-1",
+    type: "flood",
     name: "Urban Flooding",
     location: {
       label: "Koramangala, Bengaluru",
@@ -38,6 +39,7 @@ export const initialDisasterEvents: DisasterEvent[] = [
   },
   {
     id: "ev-2",
+    type: "flood",
     name: "River Overflow Alert",
     location: {
       label: "Patna Riverside Zone",
@@ -55,6 +57,7 @@ export const initialDisasterEvents: DisasterEvent[] = [
   },
   {
     id: "ev-3",
+    type: "landslide",
     name: "Landslide Warning",
     location: {
       label: "Shimla Hills Corridor",
@@ -72,6 +75,7 @@ export const initialDisasterEvents: DisasterEvent[] = [
   },
   {
     id: "ev-4",
+    type: "cyclone",
     name: "Cyclone Landfall Risk",
     location: {
       label: "Visakhapatnam Coast",

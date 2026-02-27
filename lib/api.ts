@@ -1,13 +1,19 @@
-const BASE_URL = "https://7025-14-195-240-42.ngrok-free.app";
 const OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5";
 
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(path, {
     method: "GET",
+    cache: "no-store",
   });
 
   if (!response.ok) {
-    throw new Error(`Request to ${path} failed with ${response.status}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    const body = contentType.includes("application/json")
+      ? JSON.stringify(await response.json())
+      : await response.text();
+    throw new Error(
+      `Request to ${path} failed with ${response.status}${body ? `: ${body}` : ""}`,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -71,6 +77,17 @@ export type DashboardFeedResponse = {
   recent_events: DashboardFeedEvent[];
 };
 
+export type DisasterPhoto = {
+  id: string;
+  url: string;
+  label?: string;
+};
+
+export type DisasterPhotosResponse = {
+  files: unknown[];
+  total: number;
+};
+
 export type ReportDetail = {
   id: string;
   source: string;
@@ -85,16 +102,71 @@ export type ReportDetail = {
 };
 
 export function fetchEvents(): Promise<ApiEvent[]> {
-  return getJson<ApiEvent[]>("/events");
+  return getJson<ApiEvent[]>("/api/events");
 }
 
 export function fetchDashboardFeed(limit = 20): Promise<DashboardFeedResponse> {
   const search = new URLSearchParams({ limit: String(limit) }).toString();
-  return getJson<DashboardFeedResponse>(`/dashboard/feed?${search}`);
+  return getJson<DashboardFeedResponse>(`/api/dashboard/feed?${search}`);
+}
+
+export async function fetchDisasterPhotos(): Promise<DisasterPhoto[]> {
+  const response = await getJson<DisasterPhotosResponse>("/api/media/list");
+
+  return (response.files ?? [])
+    .map((file, index) => {
+      if (typeof file === "string") {
+        const url = file.startsWith("http")
+          ? file
+          : new URL(file, window.location.origin).toString();
+
+        return {
+          id: `media-${index}`,
+          url,
+        } satisfies DisasterPhoto;
+      }
+
+      if (typeof file === "object" && file !== null) {
+        const anyFile = file as Record<string, unknown>;
+        const rawUrl =
+          (anyFile.url as string | undefined) ??
+          (anyFile.path as string | undefined) ??
+          (anyFile.filepath as string | undefined) ??
+          (anyFile.filename as string | undefined);
+
+        if (!rawUrl) {
+          return null;
+        }
+
+        const url = rawUrl.startsWith("http")
+          ? rawUrl
+          : new URL(rawUrl, window.location.origin).toString();
+
+        const label =
+          (anyFile.label as string | undefined) ??
+          (anyFile.caption as string | undefined) ??
+          (anyFile.name as string | undefined) ??
+          (anyFile.filename as string | undefined);
+
+        const id =
+          (anyFile.id as string | undefined) ??
+          (anyFile.uuid as string | undefined) ??
+          `media-${index}`;
+
+        return {
+          id,
+          url,
+          label,
+        } satisfies DisasterPhoto;
+      }
+
+      return null;
+    })
+    .filter((photo): photo is DisasterPhoto => photo !== null);
 }
 
 export function fetchReport(reportId: string): Promise<ReportDetail> {
-  return getJson<ReportDetail>(`/reports/${reportId}`);
+  return getJson<ReportDetail>(`/api/reports/${reportId}`);
 }
 
 export type WeatherForecastPoint = {
@@ -151,6 +223,5 @@ export async function fetchWeatherForecast(
 }
 
 export function fetchNews(): Promise<NewsResponse> {
-  return getJson<NewsResponse>("/news");
+  return getJson<NewsResponse>("/api/news");
 }
-

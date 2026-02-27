@@ -28,7 +28,45 @@ type DisasterMapProps = {
   weatherSeverity?: number | null;
 };
 
-type SimulationMode = "flood" | "storm" | "network";
+type SimulationMode =
+  | "all"
+  | "flood"
+  | "storm"
+  | "network"
+  | "landslide"
+  | "other";
+
+function getSimulationModeForType(type: string): SimulationMode {
+  const normalized = type.toLowerCase();
+  if (
+    normalized.includes("landslide") ||
+    normalized.includes("mudslide") ||
+    normalized.includes("rockfall") ||
+    normalized.includes("slope")
+  ) {
+    return "landslide";
+  }
+  if (
+    normalized.includes("flood") ||
+    normalized.includes("inundation") ||
+    normalized.includes("dam") ||
+    normalized.includes("river")
+  ) {
+    return "flood";
+  }
+  if (
+    normalized.includes("cyclone") ||
+    normalized.includes("storm") ||
+    normalized.includes("wind") ||
+    normalized.includes("thunder")
+  ) {
+    return "storm";
+  }
+  if (normalized === "other" || normalized === "unknown") {
+    return "other";
+  }
+  return "other";
+}
 
 const OPENWEATHER_API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API;
 
@@ -75,7 +113,7 @@ export function DisasterMap({
   const [showWeatherLayer, setShowWeatherLayer] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationTime, setSimulationTime] = useState(0);
-  const [simulationMode, setSimulationMode] = useState<SimulationMode>("flood");
+  const [simulationMode, setSimulationMode] = useState<SimulationMode>("all");
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0],
     [events, selectedEventId],
@@ -99,6 +137,16 @@ export function DisasterMap({
       window.clearInterval(intervalId);
     };
   }, [isSimulating]);
+
+  useEffect(() => {
+    if (!selectedEvent) {
+      return;
+    }
+    if (simulationMode === "all") {
+      return;
+    }
+    setSimulationMode(getSimulationModeForType(selectedEvent.type));
+  }, [selectedEvent?.id, selectedEvent?.type, simulationMode]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -146,11 +194,24 @@ export function DisasterMap({
 
             {events.map((event) => {
               const highRisk = event.confidenceScore >= 85;
+              const eventType = event.type.toLowerCase();
               const isFloodLike =
-                event.severity === "high" ||
-                event.name.toLowerCase().includes("flood") ||
-                event.name.toLowerCase().includes("river") ||
-                event.name.toLowerCase().includes("cyclone");
+                eventType.includes("flood") ||
+                eventType.includes("inundation") ||
+                eventType.includes("dam") ||
+                eventType.includes("river");
+              const isStormLike =
+                eventType.includes("cyclone") ||
+                eventType.includes("storm") ||
+                eventType.includes("wind") ||
+                eventType.includes("thunder");
+              const isLandslideLike =
+                eventType.includes("landslide") ||
+                eventType.includes("mudslide") ||
+                eventType.includes("rockfall") ||
+                eventType.includes("slope");
+              const isOtherType =
+                !isFloodLike && !isStormLike && !isLandslideLike;
 
               const phase = (simulationTime + event.confidenceScore / 140) % 1;
               const baseEnvelope = 1 - Math.abs(0.5 - phase) * 2;
@@ -158,10 +219,28 @@ export function DisasterMap({
               const baseRadius = event.id === selectedEvent?.id ? 26 : 20;
               const waveRadius = baseRadius + phase * 22;
               const stormRadius = baseRadius + baseEnvelope * 26;
+              const landslideRadius = baseRadius + baseEnvelope * 20;
+              const otherRadius = baseRadius + 6 + baseEnvelope * 10;
+
+              const showFloodLayer =
+                (simulationMode === "all" || simulationMode === "flood") &&
+                isFloodLike;
+              const showStormLayer =
+                (simulationMode === "all" || simulationMode === "storm") &&
+                isStormLike;
+              const showLandslideLayer =
+                (simulationMode === "all" || simulationMode === "landslide") &&
+                isLandslideLike;
+              const showOtherLayer =
+                (simulationMode === "all" || simulationMode === "other") &&
+                isOtherType;
+              const showNetworkLayer =
+                (simulationMode === "all" || simulationMode === "network") &&
+                highRisk;
 
               return (
                 <Fragment key={event.id}>
-                  {simulationMode === "flood" && isFloodLike ? (
+                  {showFloodLayer ? (
                     <CircleMarker
                       center={[event.location.lat, event.location.lng]}
                       radius={waveRadius}
@@ -175,7 +254,7 @@ export function DisasterMap({
                     />
                   ) : null}
 
-                  {simulationMode === "storm" && isFloodLike ? (
+                  {showStormLayer ? (
                     <CircleMarker
                       center={[event.location.lat, event.location.lng]}
                       radius={stormRadius}
@@ -190,7 +269,36 @@ export function DisasterMap({
                     />
                   ) : null}
 
-                  {simulationMode === "network" && highRisk ? (
+                  {showLandslideLayer ? (
+                    <CircleMarker
+                      center={[event.location.lat, event.location.lng]}
+                      radius={landslideRadius}
+                      pathOptions={{
+                        color: "rgba(248, 165, 76, 0.9)",
+                        fillColor: "rgba(30, 64, 175, 0.45)",
+                        fillOpacity: 0.2 + 0.55 * baseEnvelope,
+                        weight: 2.1,
+                      }}
+                      stroke
+                    />
+                  ) : null}
+
+                  {showOtherLayer ? (
+                    <CircleMarker
+                      center={[event.location.lat, event.location.lng]}
+                      radius={otherRadius}
+                      pathOptions={{
+                        color: "rgba(244, 114, 182, 0.85)",
+                        fillColor: "rgba(24, 24, 37, 0.9)",
+                        fillOpacity: 0.5,
+                        weight: 2,
+                        dashArray: "1 3",
+                      }}
+                      stroke
+                    />
+                  ) : null}
+
+                  {showNetworkLayer ? (
                     <CircleMarker
                       center={[event.location.lat, event.location.lng]}
                       radius={baseRadius + 10}
@@ -219,6 +327,9 @@ export function DisasterMap({
                     <Popup>
                       <div className="space-y-1 text-xs">
                         <p className="font-semibold">{event.name}</p>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                          {event.type}
+                        </p>
                         <p>{event.location.label}</p>
                         <p>Confidence: {event.confidenceScore}%</p>
                         <p>
@@ -241,39 +352,6 @@ export function DisasterMap({
               );
             })}
 
-            {simulationMode === "network"
-              ? (() => {
-                  const highRiskEvents = events.filter(
-                    (event) => event.confidenceScore >= 85,
-                  );
-                  if (highRiskEvents.length < 2) {
-                    return null;
-                  }
-
-                  const hub =
-                    selectedEvent && selectedEvent.confidenceScore >= 85
-                      ? selectedEvent
-                      : highRiskEvents[0];
-
-                  return highRiskEvents
-                    .filter((event) => event.id !== hub.id)
-                    .map((event) => (
-                      <Polyline
-                        key={`beam-${hub.id}-${event.id}`}
-                        positions={[
-                          [hub.location.lat, hub.location.lng],
-                          [event.location.lat, event.location.lng],
-                        ]}
-                        pathOptions={{
-                          color: "rgba(129, 230, 217, 0.9)",
-                          weight: 2.2,
-                          opacity: 0.9,
-                          className: "resq-beam-path",
-                        }}
-                      />
-                    ));
-                })()
-              : null}
           </MapContainer>
           {OPENWEATHER_API_KEY ? (
             <div className="pointer-events-auto absolute right-4 top-4 z-500 flex items-center gap-2 rounded-md border border-white/10 bg-slate-900/80 px-3 py-1.5 text-[11px] text-slate-200 shadow-lg backdrop-blur">
@@ -307,9 +385,16 @@ export function DisasterMap({
           <div
             className={[
               "pointer-events-none absolute inset-0 z-360",
-              simulationMode === "flood" && "resq-flood-overlay",
-              simulationMode === "storm" && "resq-storm-overlay",
-              simulationMode === "network" && "resq-network-overlay",
+              (simulationMode === "all" || simulationMode === "flood") &&
+                "resq-flood-overlay",
+              (simulationMode === "all" || simulationMode === "storm") &&
+                "resq-storm-overlay",
+              (simulationMode === "all" || simulationMode === "network") &&
+                "resq-network-overlay",
+              (simulationMode === "all" || simulationMode === "landslide") &&
+                "resq-landslide-overlay",
+              (simulationMode === "all" || simulationMode === "other") &&
+                "resq-other-overlay",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -324,11 +409,17 @@ export function DisasterMap({
                 </span>
                 <div className="flex items-center gap-1.5 text-[10px]">
                   <span className="rounded bg-slate-900/70 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-slate-300">
-                    {simulationMode === "flood"
-                      ? "Flood"
-                      : simulationMode === "storm"
-                        ? "Storm"
-                        : "Network"}
+                    {simulationMode === "all"
+                      ? "All Modes"
+                      : simulationMode === "flood"
+                        ? "Flood"
+                        : simulationMode === "storm"
+                          ? "Storm"
+                          : simulationMode === "network"
+                            ? "Network"
+                            : simulationMode === "landslide"
+                              ? "Landslide"
+                              : "Other"}
                   </span>
                   <span className="text-slate-400">
                     {Math.round(simulationTime * 180)
@@ -339,42 +430,20 @@ export function DisasterMap({
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSimulationMode("flood")}
-                  className={[
-                    "rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide transition",
-                    simulationMode === "flood"
-                      ? "bg-sky-500 text-slate-950 shadow-sm"
-                      : "bg-slate-900/80 text-slate-200 hover:bg-slate-800",
-                  ].join(" ")}
+                <select
+                  value={simulationMode}
+                  onChange={(event) =>
+                    setSimulationMode(event.target.value as SimulationMode)
+                  }
+                  className="rounded border border-sky-500/40 bg-slate-950/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-100 shadow-sm outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-500"
                 >
-                  Flood
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulationMode("storm")}
-                  className={[
-                    "rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide transition",
-                    simulationMode === "storm"
-                      ? "bg-violet-400 text-slate-950 shadow-sm"
-                      : "bg-slate-900/80 text-slate-200 hover:bg-slate-800",
-                  ].join(" ")}
-                >
-                  Storm
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulationMode("network")}
-                  className={[
-                    "rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide transition",
-                    simulationMode === "network"
-                      ? "bg-emerald-400 text-slate-950 shadow-sm"
-                      : "bg-slate-900/80 text-slate-200 hover:bg-slate-800",
-                  ].join(" ")}
-                >
-                  Net
-                </button>
+                  <option value="all">All (combined)</option>
+                  <option value="flood">Flood</option>
+                  <option value="storm">Storm</option>
+                  <option value="network">Network</option>
+                  <option value="landslide">Landslide</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <button
                 type="button"
@@ -402,9 +471,14 @@ export function DisasterMap({
               <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
                 Selected Event
               </p>
-              <p className="text-base font-semibold text-slate-100">
-                {selectedEvent.name}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-base font-semibold text-slate-100">
+                  {selectedEvent.name}
+                </p>
+                <span className="rounded-full border border-white/15 bg-slate-900/70 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-slate-300">
+                  {selectedEvent.type}
+                </span>
+              </div>
               <p className="text-sm text-slate-300">
                 {selectedEvent.location.label}
               </p>

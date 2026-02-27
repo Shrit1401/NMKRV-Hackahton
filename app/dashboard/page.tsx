@@ -7,6 +7,7 @@ import { MetricsBar } from "../../components/metrics-bar";
 import { EventDetailsPanel } from "../../components/event-details-panel";
 import { WeatherForecastPanel } from "../../components/weather-forecast-panel";
 import { ActivityFeed } from "../../components/activity-feed";
+import { DisasterPhotosPanel } from "../../components/disaster-photos-panel";
 import { RiskDistributionPanel } from "../../components/risk-distribution-panel";
 import { ReportDetailsPanel } from "../../components/report-details-panel";
 import { NewsPanel } from "../../components/news-panel";
@@ -16,6 +17,7 @@ import {
   fetchEvents,
   fetchNews,
   fetchReport,
+  fetchDisasterPhotos,
 } from "../../lib/api";
 import { getSourceBreakdown } from "../../lib/disaster-utils";
 import { ActivityLogEntry, DisasterEvent } from "../../lib/types";
@@ -23,6 +25,7 @@ import type {
   ApiEvent,
   DashboardFeedResponse,
   ReportDetail,
+  DisasterPhoto,
   NewsArticle,
 } from "../../lib/api";
 
@@ -37,6 +40,7 @@ function mapApiEvent(event: ApiEvent): DisasterEvent {
 
   return {
     id: event.id,
+    type: event.type,
     name,
     location: {
       label,
@@ -120,6 +124,7 @@ export default function Home() {
   const [reportLoading, setReportLoading] = useState(false);
   const [weatherSeverity, setWeatherSeverity] = useState<number | null>(null);
   const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
+  const [disasterPhotos, setDisasterPhotos] = useState<DisasterPhoto[]>([]);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId),
@@ -168,33 +173,54 @@ export default function Home() {
   }, [events]);
 
   const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [eventsResponse, feedResponse, newsResponse] = await Promise.all([
+    setLoading(true);
+    const [eventsResult, feedResult, newsResult, photosResult] =
+      await Promise.allSettled([
         fetchEvents(),
         fetchDashboardFeed(),
         fetchNews(),
+        fetchDisasterPhotos(),
       ]);
 
-      const mappedEvents = eventsResponse.map(mapApiEvent);
+    if (eventsResult.status === "fulfilled") {
+      const mappedEvents = eventsResult.value.map(mapApiEvent);
       setEvents(mappedEvents);
 
       if (mappedEvents.length > 0) {
         if (
           !selectedId ||
-          !mappedEvents.some((event) => event.id === selectedId)
+          !mappedEvents.some((event: DisasterEvent) => event.id === selectedId)
         ) {
           setSelectedId(mappedEvents[0].id);
         }
       }
-
-      setActivity(buildActivity(feedResponse));
-      setNewsArticles(newsResponse.articles);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+    } else {
+      console.error(eventsResult.reason);
+      setEvents([]);
     }
+
+    if (feedResult.status === "fulfilled") {
+      setActivity(buildActivity(feedResult.value));
+    } else {
+      console.error(feedResult.reason);
+      setActivity([]);
+    }
+
+    if (newsResult.status === "fulfilled") {
+      setNewsArticles(newsResult.value.articles);
+    } else {
+      console.error(newsResult.reason);
+      setNewsArticles([]);
+    }
+
+    if (photosResult.status === "fulfilled") {
+      setDisasterPhotos(photosResult.value);
+    } else {
+      console.error(photosResult.reason);
+      setDisasterPhotos([]);
+    }
+
+    setLoading(false);
   }, [selectedId]);
 
   useEffect(() => {
@@ -299,6 +325,7 @@ export default function Home() {
                     loading={reportLoading}
                     onClose={handleCloseReport}
                   />
+                  <DisasterPhotosPanel photos={disasterPhotos} />
                   <NewsPanel articles={newsArticles} />
 
                   <ActivityFeed
