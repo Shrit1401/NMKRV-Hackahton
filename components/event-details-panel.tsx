@@ -5,9 +5,10 @@ import { Progress } from "./ui/progress";
 
 type ConfidencePanelProps = {
   event?: DisasterEvent;
+  weatherSeverity?: number | null;
 };
 
-export function EventDetailsPanel({ event }: ConfidencePanelProps) {
+export function EventDetailsPanel({ event, weatherSeverity }: ConfidencePanelProps) {
   if (!event) {
     return (
       <Card>
@@ -20,6 +21,9 @@ export function EventDetailsPanel({ event }: ConfidencePanelProps) {
       </Card>
     );
   }
+
+  const score =
+    typeof weatherSeverity === "number" ? weatherSeverity : event.weatherSeverity;
 
   return (
     <Card>
@@ -37,8 +41,7 @@ export function EventDetailsPanel({ event }: ConfidencePanelProps) {
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span>Weather severity</span>
           <span className="font-mono text-slate-200">
-            {getWeatherSeverityLabel(event.weatherSeverity)} (
-            {event.weatherSeverity.toFixed(1)}/10)
+            {getWeatherSeverityLabel(score)} ({score.toFixed(1)}/10)
           </span>
         </div>
         <p className="text-xs text-slate-400">

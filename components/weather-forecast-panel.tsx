@@ -8,9 +8,11 @@ import {
 import { getWeatherSeverityLabel } from "../lib/disaster-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Progress } from "./ui/progress";
+import { Skeleton } from "./ui/skeleton";
 
 type WeatherForecastPanelProps = {
   event?: DisasterEvent;
+  onSeverityChange?: (value: number | null) => void;
 };
 
 type SimplifiedForecast = {
@@ -26,15 +28,19 @@ function computeSeverityScore(point: WeatherForecastPoint): number {
   const wind = point.wind?.speed ?? 0;
   const main = point.weather[0]?.main ?? "";
 
-  let score = 0;
+  let base = 0;
+  if (main === "Clear") base = 1;
+  else if (main === "Clouds") base = 2;
+  else if (main === "Drizzle") base = 3;
+  else if (main === "Snow") base = 4;
+  else if (main === "Rain") base = 5;
+  else if (main === "Thunderstorm") base = 7;
+  else if (main === "Extreme" || main === "Tornado") base = 9;
 
-  if (rain > 0) {
-    score += Math.min(5, rain / 2);
-  }
+  const rainComponent = Math.min(3, rain / 3);
+  const windComponent = Math.min(3, wind / 5);
 
-  if (wind > 5) {
-    score += Math.min(4, (wind - 5) / 2);
-  }
+  let score = base + rainComponent + windComponent;
 
   if (main === "Thunderstorm") {
     score = Math.max(score, 8);
@@ -47,7 +53,10 @@ function computeSeverityScore(point: WeatherForecastPoint): number {
   return Math.max(0, Math.min(10, Number(score.toFixed(1))));
 }
 
-export function WeatherForecastPanel({ event }: WeatherForecastPanelProps) {
+export function WeatherForecastPanel({
+  event,
+  onSeverityChange,
+}: WeatherForecastPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forecast, setForecast] = useState<WeatherForecastResponse | null>(
@@ -120,6 +129,11 @@ export function WeatherForecastPanel({ event }: WeatherForecastPanelProps) {
     );
   }, [simplified]);
 
+  useEffect(() => {
+    if (!onSeverityChange) return;
+    onSeverityChange(maxSeverity);
+  }, [maxSeverity, onSeverityChange]);
+
   if (!event) {
     return (
       <Card>
@@ -142,7 +156,30 @@ export function WeatherForecastPanel({ event }: WeatherForecastPanelProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
-          <p className="text-sm text-slate-400">Loading forecast...</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-md border border-white/5 bg-slate-950/70 px-2 py-1.5"
+                >
+                  <div className="flex flex-col gap-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : error ? (
           <p className="text-sm text-red-400">{error}</p>
         ) : simplified.length === 0 || maxSeverity == null ? (

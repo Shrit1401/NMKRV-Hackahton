@@ -1,4 +1,4 @@
-import { MessageCircle, Newspaper, Smartphone, MessageSquareText, CloudRain } from "lucide-react";
+import { Newspaper, Smartphone, MessageSquareText, CloudRain } from "lucide-react";
 import { SourceBreakdown } from "../lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -10,13 +10,11 @@ type SourceBreakdownPanelProps = {
 export function SourceBreakdownPanel({ breakdown }: SourceBreakdownPanelProps) {
   const total =
     breakdown.newsSignals +
-    breakdown.socialPosts +
     breakdown.appReports +
     breakdown.whatsappReports;
 
   const rows = [
     { label: "News Signals", value: breakdown.newsSignals, icon: Newspaper },
-    { label: "Social Posts", value: breakdown.socialPosts, icon: MessageCircle },
     { label: "App Reports", value: breakdown.appReports, icon: Smartphone },
     { label: "WhatsApp Reports", value: breakdown.whatsappReports, icon: MessageSquareText },
   ];

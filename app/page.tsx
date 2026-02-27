@@ -10,6 +10,7 @@ import { WeatherForecastPanel } from "../components/weather-forecast-panel";
 import { ActivityFeed } from "../components/activity-feed";
 import { RiskDistributionPanel } from "../components/risk-distribution-panel";
 import { ReportDetailsPanel } from "../components/report-details-panel";
+import { Skeleton } from "../components/ui/skeleton";
 import { fetchDashboardFeed, fetchEvents, fetchReport } from "../lib/api";
 import { getSourceBreakdown } from "../lib/disaster-utils";
 import { ActivityLogEntry, DisasterEvent } from "../lib/types";
@@ -107,11 +108,16 @@ export default function Home() {
     null,
   );
   const [reportLoading, setReportLoading] = useState(false);
+  const [weatherSeverity, setWeatherSeverity] = useState<number | null>(null);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId),
     [events, selectedId],
   );
+
+  useEffect(() => {
+    setWeatherSeverity(null);
+  }, [selectedEvent?.id]);
 
   const metrics = useMemo(() => {
     if (events.length === 0) {
@@ -207,6 +213,13 @@ export default function Home() {
     loadData();
   };
 
+  const breakdown =
+    selectedEvent != null ? getSourceBreakdown(selectedEvent) : null;
+  const breakdownWithWeather =
+    breakdown && weatherSeverity != null
+      ? { ...breakdown, weatherSeverity }
+      : breakdown;
+
   return (
     <div className="relative h-screen overflow-hidden bg-slate-950 text-slate-100">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.16),transparent_55%),radial-gradient(circle_at_bottom,rgba(129,140,248,0.18),transparent_55%),linear-gradient(to_bottom,#020617,#020617)]" />
@@ -215,39 +228,70 @@ export default function Home() {
       <main className="h-[calc(100vh-80px)] p-4">
         <div className="grid h-full grid-cols-1 gap-4 xl:grid-cols-10">
           <section className="h-full xl:col-span-7">
-            <DisasterMap
-              events={events}
-              selectedEventId={selectedEvent?.id}
-              onSelectEvent={setSelectedId}
-            />
+            {loading ? (
+              <div className="flex h-full flex-col gap-3 rounded-xl border border-white/5 bg-slate-950/80 p-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <div className="flex h-full flex-col gap-3">
+                  <Skeleton className="h-8 w-56" />
+                  <Skeleton className="h-full w-full rounded-lg" />
+                </div>
+              </div>
+            ) : (
+              <DisasterMap
+                events={events}
+                selectedEventId={selectedEvent?.id}
+                onSelectEvent={setSelectedId}
+                weatherSeverity={weatherSeverity ?? undefined}
+              />
+            )}
           </section>
 
           <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto pr-1 xl:col-span-3">
-            <MetricsBar
-              activeDisasters={metrics.activeDisasters}
-              avgConfidence={metrics.avgConfidence}
-              totalReports={metrics.totalReports}
-              highRiskZones={metrics.highRiskZones}
-            />
-            <EventDetailsPanel event={selectedEvent} />
-            {selectedEvent ? (
-              <SourceBreakdownPanel
-                breakdown={getSourceBreakdown(selectedEvent)}
-              />
-            ) : null}
-            {selectedEvent ? (
-              <WeatherForecastPanel event={selectedEvent} />
-            ) : null}
-            <RiskDistributionPanel events={events} />
-            <ReportDetailsPanel
-              report={selectedReportId ? selectedReport : null}
-              loading={reportLoading}
-              onClose={handleCloseReport}
-            />
-            <ActivityFeed
-              entries={activity}
-              onSelectEntry={handleSelectEntry}
-            />
+            {loading ? (
+              <>
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+              </>
+            ) : (
+              <>
+                <MetricsBar
+                  activeDisasters={metrics.activeDisasters}
+                  avgConfidence={metrics.avgConfidence}
+                  totalReports={metrics.totalReports}
+                  highRiskZones={metrics.highRiskZones}
+                />
+                <EventDetailsPanel
+                  event={selectedEvent}
+                  weatherSeverity={weatherSeverity ?? undefined}
+                />
+                {breakdownWithWeather ? (
+                  <SourceBreakdownPanel breakdown={breakdownWithWeather} />
+                ) : null}
+                {selectedEvent ? (
+                  <WeatherForecastPanel
+                    event={selectedEvent}
+                    onSeverityChange={setWeatherSeverity}
+                  />
+                ) : null}
+                <RiskDistributionPanel events={events} />
+                <ReportDetailsPanel
+                  report={selectedReportId ? selectedReport : null}
+                  loading={reportLoading}
+                  onClose={handleCloseReport}
+                />
+                <ActivityFeed
+                  entries={activity}
+                  onSelectEntry={handleSelectEntry}
+                />
+              </>
+            )}
           </aside>
         </div>
       </main>
