@@ -3,10 +3,20 @@
 import "leaflet/dist/leaflet.css";
 
 import { Fragment, useMemo } from "react";
-import L from "leaflet";
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker } from "react-leaflet";
+import type { DivIcon } from "leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  Marker,
+} from "react-leaflet";
 import { DisasterEvent } from "../lib/types";
-import { getSeverityColor, getSeverityLabel, INDIA_CENTER } from "../lib/mock-data";
+import {
+  getSeverityColor,
+  getSeverityLabel,
+  INDIA_CENTER,
+} from "../lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 type DisasterMapProps = {
@@ -15,10 +25,24 @@ type DisasterMapProps = {
   onSelectEvent: (id: string) => void;
 };
 
-function confidenceIcon(score: number, highRisk: boolean) {
+let leafletInstance: typeof import("leaflet") | null = null;
+
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const leafletModule = require("leaflet") as typeof import("leaflet") & {
+    default?: typeof import("leaflet");
+  };
+  leafletInstance = leafletModule.default ?? leafletModule;
+}
+
+function confidenceIcon(score: number, highRisk: boolean): DivIcon | undefined {
+  if (!leafletInstance) {
+    return undefined;
+  }
+
   const pulseClass = highRisk ? "resq-pulse" : "";
 
-  return L.divIcon({
+  return leafletInstance.divIcon({
     className: "",
     html: `<div class="${pulseClass}" style="display:flex;align-items:center;justify-content:center;width:34px;height:22px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:11px;font-weight:600;">${score}%</div>`,
     iconSize: [34, 22],
@@ -26,16 +50,22 @@ function confidenceIcon(score: number, highRisk: boolean) {
   });
 }
 
-export function DisasterMap({ events, selectedEventId, onSelectEvent }: DisasterMapProps) {
+export function DisasterMap({
+  events,
+  selectedEventId,
+  onSelectEvent,
+}: DisasterMapProps) {
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? events[0],
     [events, selectedEventId],
   );
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Live Disaster Map</CardTitle>
+    <Card className="relative h-full overflow-hidden">
+      <CardHeader className="flex items-center justify-between">
+        <CardTitle className="text-base font-semibold text-slate-100">
+          Live Disaster Map
+        </CardTitle>
       </CardHeader>
       <CardContent className="h-[calc(100%-56px)] p-0">
         <div className="relative h-full w-full">
@@ -90,18 +120,24 @@ export function DisasterMap({ events, selectedEventId, onSelectEvent }: Disaster
               );
             })}
           </MapContainer>
-          <div className="pointer-events-none absolute inset-0 z-[350] bg-[radial-gradient(circle_at_top,rgba(2,6,23,0.35),transparent_45%),radial-gradient(circle_at_bottom,rgba(2,6,23,0.55),transparent_55%)]" />
+          <div className="pointer-events-none absolute inset-0 z-350 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.24),transparent_45%),radial-gradient(circle_at_bottom,rgba(129,140,248,0.3),transparent_55%)]" />
 
           {selectedEvent ? (
-            <div className="pointer-events-none absolute bottom-4 left-4 z-[500] max-w-sm rounded-md border border-slate-700 bg-slate-950/95 p-3">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Selected Event</p>
-              <p className="text-base font-semibold text-slate-100">{selectedEvent.name}</p>
-              <p className="text-sm text-slate-300">{selectedEvent.location.label}</p>
+            <div className="pointer-events-none absolute bottom-4 left-4 z-500 max-w-sm rounded-lg border border-white/10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.32),transparent_55%),rgba(15,23,42,0.96)] p-3 shadow-[0_20px_70px_rgba(15,23,42,0.95)] backdrop-blur-md">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                Selected Event
+              </p>
+              <p className="text-base font-semibold text-slate-100">
+                {selectedEvent.name}
+              </p>
+              <p className="text-sm text-slate-300">
+                {selectedEvent.location.label}
+              </p>
               <div className="mt-2 flex items-center gap-3 text-xs">
-                <span className="rounded border border-slate-700 px-2 py-1 text-slate-300">
+                <span className="rounded border border-white/10 bg-slate-900/60 px-2 py-1 text-slate-200">
                   Severity: {getSeverityLabel(selectedEvent.severity)}
                 </span>
-                <span className="rounded border border-slate-700 px-2 py-1 text-slate-300">
+                <span className="rounded border border-white/10 bg-slate-900/60 px-2 py-1 text-slate-200">
                   Confidence: {selectedEvent.confidenceScore}%
                 </span>
               </div>

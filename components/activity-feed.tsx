@@ -16,7 +16,10 @@ export function ActivityFeed({ entries }: ActivityFeedProps) {
         <ScrollArea className="h-full">
           <div className="space-y-2 p-4">
             {entries.map((entry) => (
-              <div key={entry.id} className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+              <div
+                key={entry.id}
+                className="rounded-md border border-white/5 bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-slate-900/80 p-3"
+              >
                 <div className="mb-1 text-xs font-mono text-slate-500">{entry.timestamp}</div>
                 <div className="text-sm text-slate-200">{entry.message}</div>
               </div>

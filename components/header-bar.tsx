@@ -33,28 +33,29 @@ export function HeaderBar({ onRefresh }: HeaderBarProps) {
   }, []);
 
   return (
-    <header className="flex h-20 items-center justify-between border-b border-slate-800 px-5">
+    <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/5 bg-linear-to-r from-slate-950/80 via-slate-950/60 to-slate-950/80 px-5 backdrop-blur-xl shadow-[0_18px_60px_rgba(15,23,42,0.9)]">
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-emerald-500/50 bg-emerald-500/10 text-emerald-300">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-400/40 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.35),transparent_55%),rgba(15,23,42,0.9)] text-cyan-300">
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-xs tracking-[0.2em] text-slate-400">RESQNET</p>
+          <p className="bg-linear-to-r from-cyan-300 to-violet-400 bg-clip-text text-xs font-semibold tracking-[0.22em] text-transparent">
+            RESQNET
+          </p>
           <p className="text-sm font-semibold text-slate-100">
             Real-Time Disaster Intelligence Network
           </p>
         </div>
-        <Badge variant="success" className="ml-2 hidden md:flex">
-          System Status: Active
-        </Badge>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="hidden text-right md:block">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Live Clock</p>
-          <p className="font-mono text-sm text-slate-200">{clock}</p>
+          <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
+            Live Clock
+          </p>
+          <p className="font-mono text-sm text-slate-100">{clock}</p>
         </div>
-        <Button onClick={onRefresh} className="gap-2" size="md">
+        <Button onClick={onRefresh} size="lg" variant="secondary">
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh Simulation
         </Button>

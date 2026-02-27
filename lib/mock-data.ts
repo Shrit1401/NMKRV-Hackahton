@@ -10,7 +10,7 @@ import {
 
 export const INDIA_CENTER: [number, number] = [22.5937, 78.9629];
 
-const makeTrend = (base: number): ConfidenceTrend[] => [
+export const makeTrend = (base: number): ConfidenceTrend[] => [
   { time: "09:10", score: Math.max(30, base - 22) },
   { time: "09:20", score: Math.max(40, base - 16) },
   { time: "09:30", score: Math.max(50, base - 9) },

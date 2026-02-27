@@ -35,7 +35,9 @@ export function EventDetailsPanel({ event }: ConfidencePanelProps) {
       <CardContent className="space-y-3">
         <div>
           <p className="text-sm text-slate-300">{event.name}</p>
-          <p className="text-4xl font-semibold text-slate-100">{event.confidenceScore}%</p>
+          <p className="bg-gradient-to-r from-cyan-300 via-sky-400 to-violet-400 bg-clip-text text-4xl font-semibold text-transparent">
+            {event.confidenceScore}%
+          </p>
         </div>
         <Progress value={event.confidenceScore} />
         <div className="flex items-center gap-2 text-xs text-slate-400">

@@ -64,8 +64,19 @@ export function MetricsBar({
         <CardTitle>Metrics</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-3">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+        {metrics.map((metric, index) => (
+          <div
+            key={metric.label}
+            className={[
+              "relative overflow-hidden rounded-md border border-white/5 bg-slate-950/60 p-3 shadow-[0_0_35px_rgba(15,23,42,0.85)]",
+              index === 0 && "bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.25),transparent_55%),#020617]",
+              index === 1 && "bg-[radial-gradient(circle_at_top,rgba(129,140,248,0.28),transparent_55%),#020617]",
+              index === 2 && "bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.28),transparent_55%),#020617]",
+              index === 3 && "bg-[radial-gradient(circle_at_top,rgba(248,113,113,0.32),transparent_55%),#020617]",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">{metric.label}</p>
             <CountValue value={metric.value} suffix={metric.suffix} />
           </div>

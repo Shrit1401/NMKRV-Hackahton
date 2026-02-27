@@ -42,13 +42,20 @@ export function ConfidenceChart({ trend }: ConfidenceChartProps) {
                 color: "#e2e8f0",
               }}
             />
+            <defs>
+              <linearGradient id="confidenceStroke" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="40%" stopColor="#22d3ee" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
             <Line
               type="monotone"
               dataKey="score"
-              stroke="#e2e8f0"
-              strokeWidth={2}
+              stroke="url(#confidenceStroke)"
+              strokeWidth={3}
               dot={false}
-              activeDot={{ r: 3, fill: "#e2e8f0" }}
+              activeDot={{ r: 4, fill: "#22d3ee", strokeWidth: 0 }}
             />
           </LineChart>
         </ResponsiveContainer>
