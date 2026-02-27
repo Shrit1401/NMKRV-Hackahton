@@ -33,6 +33,7 @@ type SimulationMode = "flood" | "storm" | "network";
 const OPENWEATHER_API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API;
 
 let leafletInstance: typeof import("leaflet") | null = null;
+const confidenceIconCache = new Map<string, DivIcon>();
 
 if (typeof window !== "undefined") {
   // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
@@ -48,13 +49,21 @@ function confidenceIcon(score: number, highRisk: boolean): DivIcon | undefined {
   }
 
   const pulseClass = highRisk ? "resq-pulse" : "";
+  const cacheKey = `${score}-${pulseClass}`;
+  const cached = confidenceIconCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
 
-  return leafletInstance.divIcon({
+  const icon = leafletInstance.divIcon({
     className: "",
     html: `<div class="${pulseClass}" style="display:flex;align-items:center;justify-content:center;width:34px;height:22px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:11px;font-weight:600;">${score}%</div>`,
     iconSize: [34, 22],
     iconAnchor: [17, 34],
   });
+
+  confidenceIconCache.set(cacheKey, icon);
+  return icon;
 }
 
 export function DisasterMap({
@@ -77,27 +86,17 @@ export function DisasterMap({
       return;
     }
 
-    let frameId: number;
-    let lastTime = performance.now();
-
-    const loop = (now: number) => {
-      const deltaSeconds = (now - lastTime) / 1000;
-      lastTime = now;
-
+    const intervalId = window.setInterval(() => {
       setSimulationTime((prev) => {
-        const speed = 0.06;
-        const next = prev + deltaSeconds * speed;
+        const step = 0.06;
+        const next = prev + step;
         if (next >= 1) return 0;
         return next;
       });
-
-      frameId = window.requestAnimationFrame(loop);
-    };
-
-    frameId = window.requestAnimationFrame(loop);
+    }, 200);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      window.clearInterval(intervalId);
     };
   }, [isSimulating]);
 
